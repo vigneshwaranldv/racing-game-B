@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Racing Rush - Pseudo-3D Racing Game</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div id="game-container">
+        <!-- HUD -->
+        <div id="hud" class="hidden">
+            <div class="hud-top">
+                <div class="timer-container">
+                    <div class="timer-icon">⏱️</div>
+                    <div class="timer-display">
+                        <span id="timer">30.0</span>s
+                    </div>
+                </div>
+                <div class="score-container">
+                    <div class="score-label">SCORE</div>
+                    <div class="score-value" id="score">0</div>
+                </div>
+                <div class="highscore-container">
+                    <div class="highscore-label">BEST</div>
+                    <div class="highscore-value" id="highscore">0</div>
+                </div>
+            </div>
+            <div class="speed-indicator">
+                <div class="speed-bar-container">
+                    <div class="speed-bar" id="speed-bar"></div>
+                </div>
+                <div class="speed-label" id="speed-label">NORMAL</div>
+            </div>
+        </div>
+
+        <!-- Start Screen -->
+        <div id="start-screen">
+            <div class="title-container">
+                <h1 class="game-title">RACING RUSH</h1>
+                <p class="game-subtitle">Pseudo-3D Racing Experience</p>
+            </div>
+            <div class="instructions">
+                <div class="instruction-item">
+                    <span class="key">← →</span>
+                    <span>Switch Lanes</span>
+                </div>
+                <div class="instruction-item">
+                    <span class="icon">⏱️</span>
+                    <span>Avoid obstacles</span>
+                </div>
+                <div class="instruction-item">
+                    <span class="icon">💰</span>
+                    <span>Collect coins (+100)</span>
+                </div>
+                <div class="instruction-item">
+                    <span class="icon">⏰</span>
+                    <span>Time extenders (+15s)</span>
+                </div>
+            </div>
+            <button id="start-btn" class="btn-primary">START RACE</button>
+            <div class="credits">Built for GitHub Pages</div>
+        </div>
+
+        <!-- Game Over Screen -->
+        <div id="game-over-screen" class="hidden">
+            <div class="game-over-content">
+                <h2 class="game-over-title">RACE ENDED</h2>
+                <div class="final-stats">
+                    <div class="stat">
+                        <span class="stat-label">Final Time</span>
+                        <span class="stat-value" id="final-time">0s</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">Final Score</span>
+                        <span class="stat-value" id="final-score">0</span>
+                    </div>
+                    <div class="stat new-record hidden" id="new-record">
+                        <span class="stat-label">🎉 NEW RECORD! 🎉</span>
+                    </div>
+                </div>
+                <button id="restart-btn" class="btn-primary">RACE AGAIN</button>
+            </div>
+        </div>
+
+        <!-- Game Canvas -->
+        <canvas id="game-canvas"></canvas>
+    </div>
+
+    <script src="js/game.js"></script>
+</body>
+</html>
