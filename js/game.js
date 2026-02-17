@@ -99,8 +99,8 @@ class RacingGame {
         this.roadWidth = Math.min(this.canvas.width * 0.7, 600);
         this.laneWidth = this.roadWidth / this.lanes;
         
-        // Player position
-        this.player.y = this.canvas.height - 150;
+        // Player position - bottom of car sits on road surface
+        this.player.y = this.canvas.height - 80;
         this.updatePlayerX();
     }
     
@@ -467,6 +467,9 @@ class RacingGame {
         // Draw player
         this.drawPlayer();
         
+        // Draw lane position indicators near car
+        this.drawLaneIndicators();
+        
         // Draw particles
         for (const p of this.particles) {
             this.ctx.beginPath();
@@ -511,9 +514,41 @@ class RacingGame {
         this.ctx.closePath();
         
         const roadGradient = this.ctx.createLinearGradient(0, this.horizonY, 0, this.canvas.height);
-        roadGradient.addColorStop(0, '#2c3e50');
+        roadGradient.addColorStop(0, '#1a252f');
+        roadGradient.addColorStop(0.5, '#2c3e50');
         roadGradient.addColorStop(1, '#34495e');
         this.ctx.fillStyle = roadGradient;
+        this.ctx.fill();
+        
+        // Draw road texture/pavement grain
+        this.ctx.save();
+        this.ctx.beginPath();
+        this.ctx.moveTo(centerX - roadTopWidth / 2, this.horizonY);
+        this.ctx.lineTo(centerX + roadTopWidth / 2, this.horizonY);
+        this.ctx.lineTo(centerX + roadBottomWidth / 2, this.canvas.height);
+        this.ctx.lineTo(centerX - roadBottomWidth / 2, this.canvas.height);
+        this.ctx.closePath();
+        this.ctx.clip();
+        
+        // Add pavement grain texture
+        for (let i = 0; i < 300; i++) {
+            const grainY = this.horizonY + Math.random() * (this.canvas.height - this.horizonY);
+            const progress = (grainY - this.horizonY) / (this.canvas.height - this.horizonY);
+            const roadWidthAtY = roadTopWidth + (roadBottomWidth - roadTopWidth) * progress;
+            const grainX = centerX - roadWidthAtY / 2 + Math.random() * roadWidthAtY;
+            const grainSize = 1 + Math.random() * 2;
+            const alpha = 0.05 + Math.random() * 0.1;
+            
+            this.ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+            this.ctx.fillRect(grainX, grainY, grainSize, grainSize);
+        }
+        this.ctx.restore();
+        
+        // Draw road surface shading for depth
+        const surfaceGradient = this.ctx.createLinearGradient(0, this.canvas.height - 200, 0, this.canvas.height);
+        surfaceGradient.addColorStop(0, 'rgba(0, 0, 0, 0)');
+        surfaceGradient.addColorStop(1, 'rgba(0, 0, 0, 0.3)');
+        this.ctx.fillStyle = surfaceGradient;
         this.ctx.fill();
         
         // Draw road borders
@@ -605,10 +640,41 @@ class RacingGame {
         const w = this.player.width;
         const h = this.player.height;
         
-        // Shadow
-        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+        // Ground shadow - large soft shadow under car
+        const shadowGradient = this.ctx.createRadialGradient(x, y + h / 2 - 5, 0, x, y + h / 2 - 5, w * 0.8);
+        shadowGradient.addColorStop(0, 'rgba(0, 0, 0, 0.6)');
+        shadowGradient.addColorStop(0.5, 'rgba(0, 0, 0, 0.3)');
+        shadowGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        this.ctx.fillStyle = shadowGradient;
         this.ctx.beginPath();
-        this.ctx.ellipse(x, y + h / 2 + 10, w / 2, h / 6, 0, 0, Math.PI * 2);
+        this.ctx.ellipse(x, y + h / 2 - 5, w * 0.7, h / 5, 0, 0, Math.PI * 2);
+        this.ctx.fill();
+        
+        // Tire contact shadows - darker spots where tires touch road
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        this.ctx.beginPath();
+        this.ctx.ellipse(x - w / 2.5, y + h / 2 - 5, 12, 6, 0, 0, Math.PI * 2);
+        this.ctx.fill();
+        this.ctx.beginPath();
+        this.ctx.ellipse(x + w / 2.5, y + h / 2 - 5, 12, 6, 0, 0, Math.PI * 2);
+        this.ctx.fill();
+        
+        // Car body
+        const bodyGradient = this.ctx.createLinearGradient(x - w / 2, y - h / 2, x + w / 2, y + h / 2);
+        bodyGradient.addColorStop(0, '#e74c3c');
+        bodyGradient.addColorStop(0.5, '#c0392b');
+        bodyGradient.addColorStop(1, '#e74c3c');
+        
+        // Main body
+        this.ctx.fillStyle = bodyGradient;
+        this.ctx.beginPath();
+        this.ctx.moveTo(x - w / 3, y - h / 2);
+        this.ctx.lineTo(x + w / 3, y - h / 2);
+        this.ctx.lineTo(x + w / 2, y);
+        this.ctx.lineTo(x + w / 2, y + h / 3);
+        this.ctx.lineTo(x - w / 2, y + h / 3);
+        this.ctx.lineTo(x - w / 2, y);
+        this.ctx.closePath();
         this.ctx.fill();
         
         // Car body
@@ -675,6 +741,28 @@ class RacingGame {
         this.ctx.beginPath();
         this.ctx.arc(x + w / 3, y - h / 2 + 5, 5, 0, Math.PI * 2);
         this.ctx.fill();
+        
+        // Wheels/Tires - make car look grounded
+        const wheelY = y + h / 2 - 5;
+        const wheelSize = 10;
+        
+        // Left wheel
+        this.ctx.fillStyle = '#1a1a1a';
+        this.ctx.beginPath();
+        this.ctx.arc(x - w / 2.5, wheelY, wheelSize, 0, Math.PI * 2);
+        this.ctx.fill();
+        this.ctx.strokeStyle = '#333';
+        this.ctx.lineWidth = 2;
+        this.ctx.stroke();
+        
+        // Right wheel
+        this.ctx.fillStyle = '#1a1a1a';
+        this.ctx.beginPath();
+        this.ctx.arc(x + w / 2.5, wheelY, wheelSize, 0, Math.PI * 2);
+        this.ctx.fill();
+        this.ctx.strokeStyle = '#333';
+        this.ctx.lineWidth = 2;
+        this.ctx.stroke();
         
         // Slow effect indicator
         if (this.player.speedState === 'slow') {
@@ -798,6 +886,48 @@ class RacingGame {
             this.ctx.lineTo(x, y + length);
             this.ctx.stroke();
         }
+    }
+    
+    drawLaneIndicators() {
+        const centerX = this.canvas.width / 2;
+        const carY = this.player.y + this.player.height / 2;
+        const indicatorY = carY + 20;
+        
+        // Draw lane markers at car level
+        for (let i = 0; i < this.lanes; i++) {
+            const laneX = centerX + (i - 1) * this.laneWidth;
+            
+            // Lane number or indicator
+            this.ctx.save();
+            this.ctx.font = 'bold 16px Arial';
+            this.ctx.textAlign = 'center';
+            this.ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+            this.ctx.fillText((i + 1).toString(), laneX, indicatorY);
+            
+            // Highlight current lane
+            if (i === this.player.lane) {
+                this.ctx.strokeStyle = 'rgba(46, 204, 113, 0.5)';
+                this.ctx.lineWidth = 3;
+                this.ctx.beginPath();
+                this.ctx.arc(laneX, indicatorY - 5, 15, 0, Math.PI * 2);
+                this.ctx.stroke();
+            }
+            this.ctx.restore();
+        }
+        
+        // Draw lane dividers near car
+        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+        this.ctx.lineWidth = 2;
+        this.ctx.setLineDash([10, 10]);
+        
+        for (let i = 1; i < this.lanes; i++) {
+            const dividerX = centerX + (i - 1.5) * this.laneWidth;
+            this.ctx.beginPath();
+            this.ctx.moveTo(dividerX, carY - 50);
+            this.ctx.lineTo(dividerX, carY + 50);
+            this.ctx.stroke();
+        }
+        this.ctx.setLineDash([]);
     }
 }
 
