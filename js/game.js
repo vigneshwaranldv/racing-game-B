@@ -54,9 +54,13 @@ class RacingGame {
         this.roadOffset = 0;
         this.markingOffset = 0;
         this.particles = [];
+        this.floatingTexts = [];
         
         // Input
         this.keys = {};
+        this.isPaused = false;
+        this.pauseStartTime = 0;
+        this.totalPausedTime = 0;
         
         // Initialize
         this.init();
@@ -65,7 +69,7 @@ class RacingGame {
     init() {
         // Load high score
         this.highScore = parseInt(localStorage.getItem('racingRushHighScore')) || 0;
-        document.getElementById('highscore').textContent = this.highScore;
+        document.getElementById('highscore').textContent = this.highScore + 's';
         
         // Setup canvas
         this.resize();
@@ -74,6 +78,9 @@ class RacingGame {
         // Setup controls
         document.addEventListener('keydown', (e) => this.handleKeyDown(e));
         document.addEventListener('keyup', (e) => this.handleKeyUp(e));
+        
+        // Handle tab visibility change to pause game
+        document.addEventListener('visibilitychange', () => this.handleVisibilityChange());
         
         // Setup buttons
         document.getElementById('start-btn').addEventListener('click', () => this.startGame());
@@ -123,6 +130,21 @@ class RacingGame {
         this.keys[e.key] = false;
     }
     
+    handleVisibilityChange() {
+        if (document.hidden && this.state === 'PLAYING') {
+            // Pause game when tab is hidden
+            this.isPaused = true;
+            this.pauseStartTime = Date.now();
+        } else if (!document.hidden && this.isPaused) {
+            // Resume game when tab is visible
+            this.isPaused = false;
+            const pauseDuration = Date.now() - this.pauseStartTime;
+            this.totalPausedTime += pauseDuration;
+            // Adjust start time to account for pause
+            this.startTime += pauseDuration;
+        }
+    }
+    
     startGame() {
         // Reset game state
         this.state = 'PLAYING';
@@ -146,6 +168,10 @@ class RacingGame {
         // Reset particles
         this.particles = [];
         
+        // Reset pause state
+        this.isPaused = false;
+        this.totalPausedTime = 0;
+        
         // Update UI
         document.getElementById('start-screen').classList.add('hidden');
         document.getElementById('game-over-screen').classList.add('hidden');
@@ -156,8 +182,8 @@ class RacingGame {
     endGame() {
         this.state = 'GAME_OVER';
         
-        // Calculate final race time
-        const finalTime = ((Date.now() - this.startTime) / 1000).toFixed(1);
+        // Calculate final race time (accounting for paused time)
+        const finalTime = ((Date.now() - this.startTime - this.totalPausedTime) / 1000).toFixed(1);
         
         // Update high score if beaten
         const raceTime = Math.floor(parseFloat(finalTime));
@@ -172,7 +198,7 @@ class RacingGame {
         // Update UI
         document.getElementById('final-time').textContent = finalTime + 's';
         document.getElementById('final-score').textContent = this.score;
-        document.getElementById('highscore').textContent = this.highScore;
+        document.getElementById('highscore').textContent = this.highScore + 's';
         document.getElementById('hud').classList.add('hidden');
         document.getElementById('game-over-screen').classList.remove('hidden');
     }
@@ -182,7 +208,7 @@ class RacingGame {
         this.deltaTime = timestamp - this.lastTime;
         this.lastTime = timestamp;
         
-        if (this.state === 'PLAYING') {
+        if (this.state === 'PLAYING' && !this.isPaused) {
             this.update(this.deltaTime);
         }
         
@@ -269,13 +295,19 @@ class RacingGame {
             
             // Check collision
             if (obj.z < 200 && obj.z > 50) {
-                const playerLane = Math.round(this.player.targetLane);
-                if (obj.lane === playerLane && !obj.collected) {
+                // Use current visual lane position for more accurate collision
+                const laneCenterX = this.canvas.width / 2;
+                const laneOffset = this.player.x - laneCenterX;
+                const playerLane = Math.round((laneOffset / this.laneWidth) + 1);
+                const clampedLane = Math.max(0, Math.min(2, playerLane));
+                
+                if (obj.lane === clampedLane && !obj.collected) {
                     if (obj.type === 'obstacle') {
                         // Hit obstacle - slow down
                         this.player.speedState = 'slow';
                         this.player.slowTimer = this.player.slowDuration;
                         this.createParticles(obj.currentX, obj.currentY, '#e74c3c');
+                        this.createFloatingText(obj.currentX, obj.currentY, 'SLOWED!', '#e74c3c');
                         this.objects.splice(i, 1);
                     } else {
                         // Collect item
@@ -283,9 +315,11 @@ class RacingGame {
                         if (obj.type === 'coin') {
                             this.score += 100;
                             this.createParticles(obj.currentX, obj.currentY, '#f1c40f');
+                            this.createFloatingText(obj.currentX, obj.currentY - 20, '+100', '#f1c40f');
                         } else if (obj.type === 'time') {
                             this.timeRemaining += 15;
                             this.createParticles(obj.currentX, obj.currentY, '#3498db');
+                            this.createFloatingText(obj.currentX, obj.currentY - 20, '+15s', '#3498db');
                         }
                         this.objects.splice(i, 1);
                     }
@@ -302,6 +336,16 @@ class RacingGame {
             p.vy += 0.3; // gravity
             if (p.life <= 0) {
                 this.particles.splice(i, 1);
+            }
+        }
+        
+        // Update floating texts
+        for (let i = this.floatingTexts.length - 1; i >= 0; i--) {
+            const ft = this.floatingTexts[i];
+            ft.y += ft.vy;
+            ft.life -= dt;
+            if (ft.life <= 0) {
+                this.floatingTexts.splice(i, 1);
             }
         }
         
@@ -347,14 +391,27 @@ class RacingGame {
         }
     }
     
+    createFloatingText(x, y, text, color) {
+        this.floatingTexts.push({
+            x: x,
+            y: y,
+            text: text,
+            color: color,
+            life: 1000,
+            maxLife: 1000,
+            vy: -1
+        });
+    }
+    
     updateHUD() {
         const timerEl = document.getElementById('timer');
         timerEl.textContent = this.timeRemaining.toFixed(1);
         
+        const timerDisplay = timerEl.closest('.timer-display');
         if (this.timeRemaining <= 5) {
-            timerEl.parentElement.classList.add('warning');
+            timerDisplay.classList.add('warning');
         } else {
-            timerEl.parentElement.classList.remove('warning');
+            timerDisplay.classList.remove('warning');
         }
         
         document.getElementById('score').textContent = this.score;
@@ -418,6 +475,20 @@ class RacingGame {
             this.ctx.globalAlpha = p.life / 500;
             this.ctx.fill();
             this.ctx.globalAlpha = 1;
+        }
+        
+        // Draw floating texts
+        for (const ft of this.floatingTexts) {
+            this.ctx.save();
+            this.ctx.font = 'bold 20px Arial';
+            this.ctx.fillStyle = ft.color;
+            this.ctx.globalAlpha = ft.life / ft.maxLife;
+            this.ctx.textAlign = 'center';
+            this.ctx.strokeStyle = '#000';
+            this.ctx.lineWidth = 3;
+            this.ctx.strokeText(ft.text, ft.x, ft.y);
+            this.ctx.fillText(ft.text, ft.x, ft.y);
+            this.ctx.restore();
         }
         
         // Draw speed lines effect
