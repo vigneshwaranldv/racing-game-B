@@ -677,24 +677,6 @@ class RacingGame {
         this.ctx.closePath();
         this.ctx.fill();
         
-        // Car body
-        const bodyGradient = this.ctx.createLinearGradient(x - w / 2, y - h / 2, x + w / 2, y + h / 2);
-        bodyGradient.addColorStop(0, '#e74c3c');
-        bodyGradient.addColorStop(0.5, '#c0392b');
-        bodyGradient.addColorStop(1, '#e74c3c');
-        
-        // Main body
-        this.ctx.fillStyle = bodyGradient;
-        this.ctx.beginPath();
-        this.ctx.moveTo(x - w / 3, y - h / 2);
-        this.ctx.lineTo(x + w / 3, y - h / 2);
-        this.ctx.lineTo(x + w / 2, y);
-        this.ctx.lineTo(x + w / 2, y + h / 3);
-        this.ctx.lineTo(x - w / 2, y + h / 3);
-        this.ctx.lineTo(x - w / 2, y);
-        this.ctx.closePath();
-        this.ctx.fill();
-        
         // Roof/windshield
         this.ctx.fillStyle = '#2c3e50';
         this.ctx.beginPath();
